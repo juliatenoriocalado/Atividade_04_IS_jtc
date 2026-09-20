@@ -24,6 +24,8 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+static struct list sleep_list;
+
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
@@ -92,6 +94,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  list_init (&sleep_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -210,12 +213,62 @@ thread_create (const char *name, int priority,
    This function must be called with interrupts turned off.  It
    is usually a better idea to use one of the synchronization
    primitives in synch.h. */
+
+void
+thread_sleep (int64_t wakeup_tick)
+{
+  enum intr_level old_level;
+  struct thread *current;
+
+  /* Desabilita interrupções e guarda o nível anterior. */
+  old_level = intr_disable();
+
+  /* Pega a thread atual. */
+  current = thread_current();
+
+  /* Guarda o tick em que a thread deve acordar. */
+  current->wakeup_tick = wakeup_tick;
+
+  /* Coloca a thread na lista de threads dormindo. */
+  list_push_back(&sleep_list, &current->elem);
+
+  /* Bloqueia a thread. */
+  thread_block();
+
+  /* Restaura o nível anterior de interrupções. */
+  intr_set_level(old_level);
+}
+
+
+/* Acorda as threads cujo wakeup_tick já chegou. */
+void
+thread_wakeup (int64_t current_tick)
+{
+  struct list_elem *e;
+
+  e = list_begin (&sleep_list);
+  while (e != list_end (&sleep_list))
+    {
+      struct thread *t = list_entry (e, struct thread, elem);
+
+      if (t->wakeup_tick <= current_tick)
+        {
+          e = list_remove (e);
+          thread_unblock (t);
+        }
+      else
+        {
+          e = list_next (e);
+        }
+    }
+}
+
+
 void
 thread_block (void) 
 {
   ASSERT (!intr_context ());
   ASSERT (intr_get_level () == INTR_OFF);
-
   thread_current ()->status = THREAD_BLOCKED;
   schedule ();
 }
