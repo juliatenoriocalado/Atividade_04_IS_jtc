@@ -1,11 +1,40 @@
-# Pintos
-Labs for undergraduate OS class (600.318) at Johns Hopkins. [Pintos](http://pintos-os.org) 
-is a teaching operating system for x86, challenging but not overwhelming, small
-but realistic enough to understand OS in depth (it can run x86 machine and simulators 
-including QEMU, Bochs and VMWare Player!). The main source code, documentation and assignments 
-are developed by Ben Pfaff and others from Stanford (refer to its [LICENSE](src/LICENSE)).
+# Implementação 4 — Pint-OS Alarm Clock
 
-The course instructor ([Ryan Huang](mailto:huang@cs.jhu.edu)) made some changes to the original
-Pintos labs to tailor for his class. The upstream for this branch comes from 
-[https://github.com/ryanphuang/PintosM](https://github.com/ryanphuang/PintosM). For students in the class, please
-download the release version for this branch at https://github.com/jhu-cs318/pintos.git
+Atividade da disciplina de Infraestrutura de Software com o objetivo de substituir a implementação de `timer_sleep()` baseada em busy wait por um mecanismo de bloqueio e despertar de threads.
+
+## Objetivo
+
+A implementação faz com que uma thread que solicita uma espera seja bloqueada durante o período necessário, sem permanecer consumindo CPU com chamadas repetidas a `thread_yield()`.
+
+Quando o tick de despertar é atingido, a interrupção do temporizador solicita o desbloqueio da thread, que volta para a fila de threads prontas.
+
+## Principais alterações
+
+### `src/devices/timer.c`
+
+- `timer_sleep()` calcula o tick em que a thread deve acordar.
+- Esperas com valor zero ou negativo retornam imediatamente.
+- A thread é bloqueada por meio de `thread_sleep()`.
+- A interrupção do timer chama o mecanismo responsável por acordar threads cujo tempo de espera terminou.
+
+### `src/threads/thread.c`
+
+- Utilização de uma lista específica para threads adormecidas.
+- Implementação de `thread_sleep()`.
+- Implementação de `thread_wakeup()`.
+- Desbloqueio das threads quando `wakeup_tick` é atingido.
+- Ordenação da `ready_list` por prioridade utilizando `list_insert_ordered()`.
+- Uso da prioridade tanto no desbloqueio quanto no `thread_yield()`.
+
+### `src/threads/thread.h`
+
+- Campo `wakeup_tick` associado à thread.
+- Protótipos das funções utilizadas pelo mecanismo de sono e despertar.
+
+## Compilação
+
+A partir do diretório `src/threads`:
+
+```bash
+make clean
+make
