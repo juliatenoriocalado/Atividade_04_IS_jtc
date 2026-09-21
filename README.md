@@ -1,4 +1,4 @@
-# Implementação 4 — Pint-OS Alarm Clock
+# Implementação 4 | Pint-OS Alarm Clock
 
 Atividade da disciplina de Infraestrutura de Software com o objetivo de substituir a implementação de `timer_sleep()` baseada em busy wait por um mecanismo de bloqueio e despertar de threads.
 
